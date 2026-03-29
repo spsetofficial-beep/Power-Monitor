@@ -1,155 +1,112 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>⚡ Power Monitor Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
-    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-database.js";
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-database.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyBnWKxLcb_peXWlGeaFkVpBRSIGvkNA36o",
-      authDomain: "power-monitor-21b92.firebaseapp.com",
-      databaseURL: "https://power-monitor-21b92-default-rtdb.asia-southeast1.firebasedatabase.app",
-      projectId: "power-monitor-21b92",
-      storageBucket: "power-monitor-21b92.firebasestorage.app",
-      messagingSenderId: "1009181897878",
-      appId: "1:1009181897878:web:f4634199f34925feeb3eb7"
-    };
+const firebaseConfig = {
+  apiKey: "AIzaSy...",
+  databaseURL: "https://power-monitor-21b92-default-rtdb.asia-southeast1.firebasedatabase.app"
+};
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
 
-    let powerData = [];
+const ctx = document.getElementById('chart').getContext('2d');
 
-    const ctx = document.getElementById('powerChart').getContext('2d');
-    const chart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: [],
-        datasets: [
-          { label: 'Power (W)', data: [], borderWidth: 2 },
-          { label: 'Voltage (V)', data: [], borderWidth: 2 },
-          { label: 'Current (A)', data: [], borderWidth: 2 }
-        ]
-      }
-    });
+const chart = new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels: [],
+    datasets: [
+      { label: 'Power', data: [] },
+      { label: 'Voltage', data: [] }
+    ]
+  }
+});
 
-    const dataRef = ref(db, 'powerData');
+onValue(ref(db, 'powerData'), snapshot => {
+  const data = snapshot.val();
+  const keys = Object.keys(data);
 
-    onValue(dataRef, (snapshot) => {
-      const data = snapshot.val();
-      if (!data) return;
+  const latest = data[keys[keys.length-1]];
 
-      const keys = Object.keys(data);
+  document.getElementById("pf").innerText = latest.pf;
+  document.getElementById("freq").innerText = latest.frequency + " Hz";
+  document.getElementById("reactive").innerText = latest.reactive + " VAR";
+  document.getElementById("energy").innerText = latest.energy + " kWh";
 
-      let totalEnergy = 0;
+  chart.data.labels.push(latest.time);
+  chart.data.datasets[0].data.push(latest.power);
+  chart.data.datasets[1].data.push(latest.voltage);
+  chart.update();
+});
+</script>
 
-      keys.slice(-20).forEach((key) => {
-        const d = data[key];
+<style>
+body {
+  background: linear-gradient(135deg,#0f172a,#1e293b);
+  color:white;
+  font-family: 'Segoe UI';
+  text-align:center;
+}
 
-        chart.data.labels.push(d.time);
-        chart.data.datasets[0].data.push(d.power);
-        chart.data.datasets[1].data.push(d.voltage);
-        chart.data.datasets[2].data.push(d.current);
+.grid {
+  display:grid;
+  grid-template-columns: repeat(auto-fit,minmax(150px,1fr));
+  gap:10px;
+  padding:10px;
+}
 
-        totalEnergy += d.power;
-      });
+.card {
+  background:#111827;
+  padding:20px;
+  border-radius:15px;
+  box-shadow:0 0 20px rgba(0,0,0,0.5);
+}
 
-      chart.update();
-
-      const latest = data[keys[keys.length - 1]];
-
-      document.getElementById("voltage").innerText = latest.voltage + " V";
-      document.getElementById("current").innerText = latest.current + " A";
-      document.getElementById("power").innerText = latest.power + " W";
-      document.getElementById("level").innerText = latest.level;
-
-      // 🔥 BILL CALCULATION (₹8/unit)
-      let kwh = totalEnergy / 1000 / 12;
-      let bill = kwh * 8;
-
-      document.getElementById("bill").innerText = "₹ " + bill.toFixed(2);
-
-      // 🔮 SIMPLE PREDICTION
-      let trend = latest.power > 200 ? "High Usage Expected" : "Normal Usage";
-
-      document.getElementById("prediction").innerText = trend;
-    });
-
-  </script>
-
-  <style>
-    body {
-      background: #0f172a;
-      color: white;
-      font-family: Arial;
-      text-align: center;
-    }
-
-    h1 {
-      color: #38bdf8;
-    }
-
-    .card {
-      background: #1e293b;
-      padding: 15px;
-      margin: 10px;
-      border-radius: 10px;
-    }
-
-    .value {
-      font-size: 24px;
-      font-weight: bold;
-    }
-
-    canvas {
-      background: white;
-      border-radius: 10px;
-    }
-  </style>
+.value {
+  font-size:22px;
+  font-weight:bold;
+  color:#38bdf8;
+}
+</style>
 </head>
 
 <body>
 
-<h1>⚡ Power Monitor Dashboard</h1>
+<h1>⚡ Smart Power Dashboard</h1>
+
+<div class="grid">
 
 <div class="card">
-  <div>Voltage</div>
-  <div id="voltage" class="value">--</div>
+<div>Power Factor</div>
+<div id="pf" class="value">--</div>
 </div>
 
 <div class="card">
-  <div>Current</div>
-  <div id="current" class="value">--</div>
+<div>Frequency</div>
+<div id="freq" class="value">--</div>
 </div>
 
 <div class="card">
-  <div>Power</div>
-  <div id="power" class="value">--</div>
+<div>Reactive Power</div>
+<div id="reactive" class="value">--</div>
 </div>
 
 <div class="card">
-  <div>Status</div>
-  <div id="level" class="value">--</div>
+<div>Energy</div>
+<div id="energy" class="value">--</div>
 </div>
 
-<div class="card">
-  <div>Estimated Bill</div>
-  <div id="bill" class="value">--</div>
 </div>
 
-<div class="card">
-  <div>Prediction</div>
-  <div id="prediction" class="value">--</div>
-</div>
-
-<div class="card">
-  <canvas id="powerChart"></canvas>
-</div>
+<canvas id="chart"></canvas>
 
 </body>
 </html>
