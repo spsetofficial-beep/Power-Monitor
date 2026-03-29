@@ -3,6 +3,8 @@
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
+<title>Power Monitor Dashboard</title>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script type="module">
@@ -10,38 +12,47 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/fireba
 import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-database.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSy...",
+  apiKey: "AIzaSyBnWKxLcb_peXWlGeaFkVpBRSIGvkNA36o",
   databaseURL: "https://power-monitor-21b92-default-rtdb.asia-southeast1.firebasedatabase.app"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-const ctx = document.getElementById('chart').getContext('2d');
-
-const chart = new Chart(ctx, {
-  type: 'line',
+const chart = new Chart(document.getElementById("chart"), {
+  type: "line",
   data: {
     labels: [],
     datasets: [
-      { label: 'Power', data: [] },
-      { label: 'Voltage', data: [] }
+      { label: "Power (W)", data: [], borderWidth: 2 },
+      { label: "Voltage (V)", data: [], borderWidth: 2 }
     ]
   }
 });
 
-onValue(ref(db, 'powerData'), snapshot => {
+onValue(ref(db, "powerData"), (snapshot) => {
+
   const data = snapshot.val();
+  if (!data) return;
+
   const keys = Object.keys(data);
+  const latest = data[keys[keys.length - 1]];
 
-  const latest = data[keys[keys.length-1]];
-
+  document.getElementById("voltage").innerText = latest.voltage + " V";
+  document.getElementById("current").innerText = latest.current + " A";
+  document.getElementById("power").innerText = latest.power + " W";
   document.getElementById("pf").innerText = latest.pf;
   document.getElementById("freq").innerText = latest.frequency + " Hz";
-  document.getElementById("reactive").innerText = latest.reactive + " VAR";
-  document.getElementById("energy").innerText = latest.energy + " kWh";
+  document.getElementById("bill").innerText = "₹ " + latest.bill;
+  document.getElementById("fault").innerText = latest.fault;
 
-  chart.data.labels.push(latest.time);
+  // Status color
+  let color = "#16a34a";
+  if (latest.fault !== "NORMAL") color = "#dc2626";
+  document.getElementById("status").style.background = color;
+
+  // Graph update
+  chart.data.labels.push(keys.length);
   chart.data.datasets[0].data.push(latest.power);
   chart.data.datasets[1].data.push(latest.voltage);
   chart.update();
@@ -50,30 +61,54 @@ onValue(ref(db, 'powerData'), snapshot => {
 
 <style>
 body {
-  background: linear-gradient(135deg,#0f172a,#1e293b);
-  color:white;
-  font-family: 'Segoe UI';
-  text-align:center;
+  font-family: 'Segoe UI', sans-serif;
+  background: #f1f5f9;
+  margin: 0;
+  text-align: center;
 }
 
-.grid {
-  display:grid;
-  grid-template-columns: repeat(auto-fit,minmax(150px,1fr));
-  gap:10px;
-  padding:10px;
+h1 {
+  background: white;
+  padding: 15px;
+  margin: 0;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px,1fr));
+  gap: 15px;
+  padding: 15px;
 }
 
 .card {
-  background:#111827;
-  padding:20px;
-  border-radius:15px;
-  box-shadow:0 0 20px rgba(0,0,0,0.5);
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.label {
+  font-size: 14px;
+  color: #64748b;
 }
 
 .value {
-  font-size:22px;
-  font-weight:bold;
-  color:#38bdf8;
+  font-size: 22px;
+  font-weight: bold;
+}
+
+.status {
+  color: white;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+canvas {
+  margin: 20px;
+  background: white;
+  border-radius: 10px;
+  padding: 10px;
 }
 </style>
 </head>
@@ -82,26 +117,45 @@ body {
 
 <h1>⚡ Smart Power Dashboard</h1>
 
-<div class="grid">
+<div class="container">
 
 <div class="card">
-<div>Power Factor</div>
+<div class="label">Voltage</div>
+<div id="voltage" class="value">--</div>
+</div>
+
+<div class="card">
+<div class="label">Current</div>
+<div id="current" class="value">--</div>
+</div>
+
+<div class="card">
+<div class="label">Power</div>
+<div id="power" class="value">--</div>
+</div>
+
+<div class="card">
+<div class="label">Power Factor</div>
 <div id="pf" class="value">--</div>
 </div>
 
 <div class="card">
-<div>Frequency</div>
+<div class="label">Frequency</div>
 <div id="freq" class="value">--</div>
 </div>
 
 <div class="card">
-<div>Reactive Power</div>
-<div id="reactive" class="value">--</div>
+<div class="label">Bill</div>
+<div id="bill" class="value">--</div>
 </div>
 
 <div class="card">
-<div>Energy</div>
-<div id="energy" class="value">--</div>
+<div class="label">Fault</div>
+<div id="fault" class="value">--</div>
+</div>
+
+<div class="card status" id="status">
+System Status
 </div>
 
 </div>
