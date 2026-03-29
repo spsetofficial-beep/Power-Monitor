@@ -2,8 +2,7 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
-<title>Power Monitor Dashboard</title>
+<title>⚡ Smart Power Dashboard</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -11,6 +10,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
 import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-database.js";
 
+// 🔥 Firebase Config
 const firebaseConfig = {
   apiKey: "AIzaSyBnWKxLcb_peXWlGeaFkVpBRSIGvkNA36o",
   databaseURL: "https://power-monitor-21b92-default-rtdb.asia-southeast1.firebasedatabase.app"
@@ -19,17 +19,22 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
+// 📊 Chart Setup
 const chart = new Chart(document.getElementById("chart"), {
   type: "line",
   data: {
     labels: [],
     datasets: [
-      { label: "Power (W)", data: [], borderWidth: 2 },
-      { label: "Voltage (V)", data: [], borderWidth: 2 }
+      { label: "Power (W)", data: [], borderColor: "#2563eb", tension: 0.4 },
+      { label: "Voltage (V)", data: [], borderColor: "#16a34a", tension: 0.4 },
+      { label: "Current (A)", data: [], borderColor: "#f59e0b", tension: 0.4 }
     ]
   }
 });
 
+const maxPoints = 20;
+
+// 🔄 Firebase Listener
 onValue(ref(db, "powerData"), (snapshot) => {
 
   const data = snapshot.val();
@@ -38,23 +43,32 @@ onValue(ref(db, "powerData"), (snapshot) => {
   const keys = Object.keys(data);
   const latest = data[keys[keys.length - 1]];
 
+  // 🔢 Update values
   document.getElementById("voltage").innerText = latest.voltage + " V";
   document.getElementById("current").innerText = latest.current + " A";
   document.getElementById("power").innerText = latest.power + " W";
   document.getElementById("pf").innerText = latest.pf;
   document.getElementById("freq").innerText = latest.frequency + " Hz";
+  document.getElementById("energy").innerText = latest.energy + " kWh";
   document.getElementById("bill").innerText = "₹ " + latest.bill;
   document.getElementById("fault").innerText = latest.fault;
 
-  // Status color
+  // 🎨 Status color
   let color = "#16a34a";
   if (latest.fault !== "NORMAL") color = "#dc2626";
   document.getElementById("status").style.background = color;
 
-  // Graph update
-  chart.data.labels.push(keys.length);
+  // 📊 Graph update
+  chart.data.labels.push(new Date().toLocaleTimeString());
   chart.data.datasets[0].data.push(latest.power);
   chart.data.datasets[1].data.push(latest.voltage);
+  chart.data.datasets[2].data.push(latest.current);
+
+  if (chart.data.labels.length > maxPoints) {
+    chart.data.labels.shift();
+    chart.data.datasets.forEach(ds => ds.data.shift());
+  }
+
   chart.update();
 });
 </script>
@@ -64,12 +78,12 @@ body {
   font-family: 'Segoe UI', sans-serif;
   background: #f1f5f9;
   margin: 0;
-  text-align: center;
 }
 
 h1 {
-  background: white;
+  text-align: center;
   padding: 15px;
+  background: white;
   margin: 0;
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
@@ -85,7 +99,8 @@ h1 {
   background: white;
   padding: 20px;
   border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+  text-align: center;
 }
 
 .label {
@@ -96,12 +111,14 @@ h1 {
 .value {
   font-size: 22px;
   font-weight: bold;
+  margin-top: 5px;
 }
 
 .status {
   color: white;
   padding: 10px;
-  border-radius: 8px;
+  border-radius: 10px;
+  text-align: center;
 }
 
 canvas {
@@ -115,7 +132,7 @@ canvas {
 
 <body>
 
-<h1>⚡ Smart Power Dashboard</h1>
+<h1>⚡ Smart Power Monitoring Dashboard</h1>
 
 <div class="container">
 
@@ -142,6 +159,11 @@ canvas {
 <div class="card">
 <div class="label">Frequency</div>
 <div id="freq" class="value">--</div>
+</div>
+
+<div class="card">
+<div class="label">Energy</div>
+<div id="energy" class="value">--</div>
 </div>
 
 <div class="card">
