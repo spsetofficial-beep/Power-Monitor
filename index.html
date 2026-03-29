@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>⚡ Power Monitor Dashboard</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBnWKxLcb_peXWlGeaFkVpBRSIGvkNA36o",
+      authDomain: "power-monitor-21b92.firebaseapp.com",
+      databaseURL: "https://power-monitor-21b92-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "power-monitor-21b92",
+      storageBucket: "power-monitor-21b92.firebasestorage.app",
+      messagingSenderId: "1009181897878",
+      appId: "1:1009181897878:web:f4634199f34925feeb3eb7"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    let powerData = [];
+
+    const ctx = document.getElementById('powerChart').getContext('2d');
+    const chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [
+          { label: 'Power (W)', data: [], borderWidth: 2 },
+          { label: 'Voltage (V)', data: [], borderWidth: 2 },
+          { label: 'Current (A)', data: [], borderWidth: 2 }
+        ]
+      }
+    });
+
+    const dataRef = ref(db, 'powerData');
+
+    onValue(dataRef, (snapshot) => {
+      const data = snapshot.val();
+      if (!data) return;
+
+      const keys = Object.keys(data);
+
+      let totalEnergy = 0;
+
+      keys.slice(-20).forEach((key) => {
+        const d = data[key];
+
+        chart.data.labels.push(d.time);
+        chart.data.datasets[0].data.push(d.power);
+        chart.data.datasets[1].data.push(d.voltage);
+        chart.data.datasets[2].data.push(d.current);
+
+        totalEnergy += d.power;
+      });
+
+      chart.update();
+
+      const latest = data[keys[keys.length - 1]];
+
+      document.getElementById("voltage").innerText = latest.voltage + " V";
+      document.getElementById("current").innerText = latest.current + " A";
+      document.getElementById("power").innerText = latest.power + " W";
+      document.getElementById("level").innerText = latest.level;
+
+      // 🔥 BILL CALCULATION (₹8/unit)
+      let kwh = totalEnergy / 1000 / 12;
+      let bill = kwh * 8;
+
+      document.getElementById("bill").innerText = "₹ " + bill.toFixed(2);
+
+      // 🔮 SIMPLE PREDICTION
+      let trend = latest.power > 200 ? "High Usage Expected" : "Normal Usage";
+
+      document.getElementById("prediction").innerText = trend;
+    });
+
+  </script>
+
+  <style>
+    body {
+      background: #0f172a;
+      color: white;
+      font-family: Arial;
+      text-align: center;
+    }
+
+    h1 {
+      color: #38bdf8;
+    }
+
+    .card {
+      background: #1e293b;
+      padding: 15px;
+      margin: 10px;
+      border-radius: 10px;
+    }
+
+    .value {
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    canvas {
+      background: white;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>⚡ Power Monitor Dashboard</h1>
+
+<div class="card">
+  <div>Voltage</div>
+  <div id="voltage" class="value">--</div>
+</div>
+
+<div class="card">
+  <div>Current</div>
+  <div id="current" class="value">--</div>
+</div>
+
+<div class="card">
+  <div>Power</div>
+  <div id="power" class="value">--</div>
+</div>
+
+<div class="card">
+  <div>Status</div>
+  <div id="level" class="value">--</div>
+</div>
+
+<div class="card">
+  <div>Estimated Bill</div>
+  <div id="bill" class="value">--</div>
+</div>
+
+<div class="card">
+  <div>Prediction</div>
+  <div id="prediction" class="value">--</div>
+</div>
+
+<div class="card">
+  <canvas id="powerChart"></canvas>
+</div>
+
+</body>
+</html>
